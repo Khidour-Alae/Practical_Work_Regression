@@ -1,0 +1,228 @@
+---
+title: "Practical Work 2 - Regularised Regression Methods"
+author: "Adib Habbou - Alae Khidour"
+date: "24-10-2022"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, comment = NA)
+rm(list=ls())
+graphics.off()
+library(graphics)
+library(ggplot2)
+library(corrplot)
+library(glmnet)
+```
+
+```{r}
+heart_data <- read.table(file = "SAheart.txt", header = TRUE)
+heart_data <- heart_data[,-1]
+dim(heart_data)
+```
+
+```{r}
+head(heart_data)
+```
+
+```{r}
+heart_data$famhist <- factor(heart_data$famhist)
+pairs(heart_data, pch = 22, bg = c("red","blue")[unclass(factor(heart_data[,"chd"]))])
+```
+
+on regarde les points bleus et rouges
+
+```{r}
+heart_data$famhist <- as.numeric(heart_data$famhist)
+corr <- cor(heart_data)
+corrplot(corr, method = "circle")
+```
+
+```{r}
+sample <- sample(c(TRUE, FALSE), nrow(heart_data), replace = TRUE, prob = c(0.75, 0.25))
+train_data <- heart_data[sample, ]
+test_data <- heart_data[!sample, ]
+```
+
+```{r}
+res = glm(formula = chd ~ ., family = binomial, data = train_data)
+summary(res)
+```
+
+### Response : probabilité aka surface en dessou de logit
+
+### Link : valeur de la fonciton logit
+
+```{r}
+predict.glm(object = res, newdata = test_data, type = "response")
+```
+
+```{r}
+heart_data$famhist[heart_data$famhist == 1] <- -1
+heart_data$famhist[heart_data$famhist == 2] <- -2
+heart_data$famhist <- as.integer(heart_data$famhist)
+res = glm(formula = chd ~ ., family = binomial, data = heart_data)
+```
+
+odd ratio
+
+```{r}
+exp(coef(res))
+```
+
+```{r}
+exp(coef(res)["tobacco"])
+```
+
+```{r}
+heart_data$famhist[heart_data$famhist == -1] <- 0
+heart_data$famhist[heart_data$famhist == -2] <- 1
+heart_data$famhist <- as.integer(heart_data$famhist)
+head(heart_data)
+```
+
+
+```{r}
+prediction <- predict.glm(object = res, newdata = heart_data, type = "response")
+prediction <- as.numeric(prediction > 0.5)
+prediction
+```
+
+```{r}
+confusion_matrix <- table(heart_data$chd, prediction)
+confusion_matrix
+```
+
+global perfomance
+
+```{r}
+(confusion_matrix[1,1] + confusion_matrix[2,2]) / nrow(heart_data)
+```
+
+gloabl error
+
+```{r}
+(confusion_matrix[1,2] + confusion_matrix[2,1]) / nrow(heart_data)
+```
+
+false positive rate
+
+```{r}
+confusion_matrix[2,1] / nrow(heart_data)
+```
+
+false negative rate
+
+```{r}
+confusion_matrix[1,2] / nrow(heart_data)
+```
+
+```{r}
+kfold <- function(k)
+{
+  # create a vector of length number of folds
+  performance <- vector(length = k)
+  # create a sequence from 1 to k
+  folds <- cut(seq(1,nrow(heart_data)), breaks = k, labels = FALSE)
+  # perform k fold cross validation
+  for(i in 1:k)
+  {
+    # split data by fold
+    test_index <- which(folds == i, arr.ind = TRUE)
+    test_data <- heart_data[test_index,]
+    train_data <- heart_data[-test_index,]
+    # train the logistic regression on the train data set
+    res <- glm(chd ~ ., family = binomial, data = train_data)
+    test_data$chd = NULL
+    # create the design matrix
+    X <- cbind(1,test_data)
+    for (j in 1:ncol(heart_data)) 
+    { 
+      X[,j] = as.numeric(X[,j]) 
+    }
+    # make predictions
+    prediction <- 1 / (1 + exp(-(as.matrix(X)) %*% as.numeric(res$coefficients)))
+    # make binary predictions
+    binary_prediction <- as.numeric(prediction > 0.5)
+    # compute confusion matrix
+    confusion_matrix <- table(binary_prediction, heart_data[test_index,]$chd)
+    # compute the performance
+    performance[i] <- (confusion_matrix[1,1] + confusion_matrix[2,2]) / nrow(test_data)
+  }
+  return (performance)
+}
+```
+
+```{r}
+boxplot(kfold(5), ylim = c(0.5,1))
+```
+
+```{r}
+boxplot(kfold(10), ylim = c(0.5,1))
+```
+
+Variable Selection
+
+```{r}
+resall <- glm(chd~., data = heart_data, family = binomial)
+res0 <- glm(chd ~ 1, data = heart_data, family = binomial)
+```
+
+```{r}
+resfor<-step(res0,list(upper=resall),direction='forward')
+```
+
+```{r}
+resback<-step(res,direction='backward')
+```
+
+```{r}
+resstep<-step(res,direction='both')
+```
+
+```{r}
+formula(resstep)
+```
+
+Ridge Lasso
+
+```{r}
+sample <- sample(c(TRUE, FALSE), nrow(heart_data), replace = TRUE, prob = c(0.8, 0.2))
+train_data <- heart_data[sample, ]
+test_data <- heart_data[!sample, ]
+```
+
+```{r}
+ridge <- glmnet(x = train_data[,-10], y = train_data$chd, alpha = 0, family = "binomial")
+plot(ridge)
+```
+
+```{r}
+cv_ridge <- cv.glmnet(as.matrix(train_data[,-10]), train_data$chd, family = "binomial", nfolds = 10, alpha = 0)
+plot(cv_ridge)
+```
+
+```{r}
+lambda_min <- cv_ridge$lambda.min
+lambda_1se <- cv_ridge$lambda.1se
+```
+
+```{r}
+ridge_min <- glmnet(x = train_data[,-10], y = train_data$chd, alpha = 0, family = "binomial", lambda = lambda_min)
+ridge_min$beta
+```
+
+```{r}
+ridge_1se <- glmnet(x = train_data[,-10], y = train_data$chd, alpha = 0, family = "binomial", lambda = lambda_1se)
+ridge_1se$beta
+```
+
+```{r}
+predict_min <- predict(ridge_min, as.matrix(test_data[,-10]), type = "response")
+predict_1se <- predict(ridge_1se, as.matrix(test_data[,-10]), type = "response")
+```
+
+```{r}
+lasso <- glmnet(x = train_data[,-10], y = train_data$chd, alpha = 1, family = "binomial")
+plot(lasso)
+```

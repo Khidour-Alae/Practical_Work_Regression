@@ -1,0 +1,335 @@
+---
+title: "TP1_MERR"
+author: "Adib Habbou - Alae Khidour"
+date: "2022-09-19"
+output: pdf_document
+---
+
+# TP1 MERR - Adib Habbou - Alae Khidour
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+rm(list=ls())
+graphics.off()
+```
+
+## Preliminary exercises
+
+### Question 1
+
+```{r}
+exp2 <- c()
+for (k in 0:20) {
+  exp2 <- c(exp2, 2^k / factorial(k))
+}
+exp2[exp2 > 10^(-8)]
+e2 <- sum(exp2)
+abs(e2 - exp(2))
+```
+
+### Question 2
+
+```{r}
+X <- rnorm(100, 2, 1)
+Y <- X * 9.8 + rnorm(100, 0, 1/10)
+```
+
+### Question 3
+
+```{r}
+df <- data.frame(X, Y)
+write.table(df, file = "test-data-frame")
+df1 <- read.table("test-data-frame")
+df2 <- df1 - df
+```
+
+### Question 4
+
+```{r}
+save(df, file = "test-RData.RData")
+load("test-RData.RData")
+```
+
+### Question 5
+
+```{r}
+plot(X,Y)
+```
+
+```{r}
+library(ggplot2)
+ggplot(data = df, aes(x=X, y=Y)) + geom_point(color="red", size=X)
+```
+
+### Question 6
+
+```{r}
+hist(X, breaks=4)
+```
+
+```{r}
+hist(X, breaks=14)
+```
+
+## Exercice 1
+
+```{r}
+tab <- read.table(file = "~/S3/MERR - Modèles Régression Régularisée/TP/TP1/immo.txt", sep = ";", header=TRUE)
+head(tab)
+```
+
+```{r}
+names(tab)
+```
+
+```{r}
+tab[,1]
+```
+
+```{r}
+tab$surface
+```
+
+```{r}
+tab[,c(1,3)]
+```
+
+```{r}
+tab$prix
+```
+
+```{r}
+nrow(tab)
+```
+
+```{r}
+dim(tab)
+```
+
+```{r}
+plot(tab)
+```
+
+```{r}
+cor(tab)
+```
+
+### Question B
+
+```{r}
+modreg = lm(prix ~ ., data = tab)
+```
+
+
+```{r}
+print(modreg)
+```
+
+
+```{r}
+summary(modreg)
+```
+
+```{r}
+attributes(modreg)
+```
+
+```{r}
+coef(modreg)
+```
+
+
+```{r}
+modreg$res
+```
+
+### Question C
+
+```{r}
+estim_prix <- function (surface, valeur) {
+  return (309.66566 + 2.63440 * surface + 0.04518 * valeur)
+}
+```
+
+
+```{r}
+plot(tab$prix, estim_prix(tab$surface, tab$valeur))
+grid()
+abline(1,1)
+```
+
+```{r}
+plot(tab$prix - estim_prix(tab$surface, tab$valeur))
+```
+
+### Question D
+
+```{r}
+sum_prix <- mean(tab$prix)
+estim_prix <- estim_prix(tab$surface, tab$valeur)
+A <- 0
+for (i in 1:20) {
+  A <- A + (estim_prix[i] - sum_prix)^2
+}
+B <- 0
+for (i in 1:20) {
+  B <- B + (tab$prix[i] - sum_prix)^2
+}
+r_square <- A / B
+```
+
+### Question E
+
+```{r}
+library(matlib)
+X <- as.matrix(cbind(rep(1, 20), tab[,c(1, 2)]))
+Y <- as.matrix(tab$prix)
+inv(t(X)%*%X)%*%t(X)%*%Y
+```
+
+## Exercice 2
+
+```{r}
+tab = read.table("~/S3/MERR - Modèles Régression Régularisée/TP/TP1/Icecreamdata.txt", sep=";", header=TRUE)
+dim(tab)
+```
+
+
+```{r}
+modreg <- lm(formula = cons ~ ., data = tab)
+```
+
+```{r}
+summary(modreg)
+```
+
+```{r}
+coef(modreg)
+```
+
+
+#### Voir Slides "Global significativity of the model" (60 + 61)
+
+
+```{r}
+library(matlib)
+X <- as.matrix(cbind(rep(1,30), tab[,c(2, 3, 4)]))
+Y <- as.matrix(tab$cons)
+inv(t(X) %*% X) %*% t(X) %*% Y
+```
+
+```{r}
+estim_cons <- function (income, price, temp) {
+  return (0.197320045 + 0.003309825 * income - 1.044415662 * price + 0.003463629 * temp)
+}
+```
+
+
+```{r}
+n <- dim(tab)[1]
+p <- dim(tab)[2]
+y_hat <- estim_cons(tab$income, tab$price, tab$temp)
+mean_y_hat <- mean(y_hat)
+A <- sum((y_hat - mean_y_hat)^2)
+B <- sum((Y - y_hat)^2)
+F <- (n-p)/(p-1) * (A/B)
+F
+```
+
+```{r}
+p_value <- 1 - pf(F, p-1, n-p)
+p_value
+```
+
+```{r}
+confint(modreg, level = 1 - 0.05)
+```
+  
+```{r}
+confint(modreg, level = 1 - 0.01)
+```
+
+```{r}
+confint(modreg, level = 1 - 0.001)
+```
+
+```{r}
+modreg$coefficients
+```
+
+```{r}
+Y <- tab$cons
+Y_hat <- estim_cons(tab$income, tab$price, tab$temp)
+plot(Y_hat, Y)
+grid()
+abline(1,1)
+```
+
+```{r}
+predict(modreg, interval = "confidence")
+```
+
+
+```{r}
+RMSE <- sqrt(sum(((y_hat - Y)^2)/n))
+RMSE
+```
+
+```{r}
+library(ggplot2)
+ggplot(data = as.data.frame(cbind(Y, modreg$residuals)), mapping = aes(x = Y, y = V2)) +
+  geom_point(size = 1.5) + labs(x = "Target Values", y = "Residuals") + 
+  geom_hline(yintercept = 0, size = 1, color = "steelblue3")
+```
+
+Random distribution, there is no information to capture from the residuals.
+
+```{r}
+qqnorm(y = Y)
+qqline(y = Y)
+```
+
+Here we are comparing two probability distributions by plotting their quantiles against each other. We can say that the two distributions are similar if they fit the first bisector (y = x). We are comparing the theoretical esimated values with the real target values. They fit the y = x line so the two distributions are similar. Then, the linear model is the right model to use in this situation.
+
+```{r}
+shapiro.test(Y)
+```
+
+The Shapiro–Wilk test tests the null hypothesis that a sample x1, ..., xn came from a normally distributed population.
+
+The statistic test is: $$W = \frac{(\sum_{i = 1}^n{a_ix_{(i)}})^2}{\sum_{i = 1}^n{(x_i-\bar{x})^2}}$$
+
+Where $x_{(i)}$ is the ith-smallest number in the sample and $\bar{x}$ is the mean of the sample.
+
+Here we can see that the p-value is equal to $0.2641$ which is lower that $3%$ the we can reject the null hypothesis with an alpha level of $3%$. Therefore, we can assume that our data is not normally distributed.
+
+```{r}
+0.19731507 + 0.00330776 * 85 + -1.04441399 * 0.28 + 0.00345843 * 50
+```
+
+```{r}
+R_Squared_Adj <- vector(length = 100)
+RMSD_Train <- vector(length = 100)
+RMSD_Test <- vector(length = 100)
+for (i in 1:100)
+{
+  # train and test split
+  sample <- sample(c(TRUE, FALSE), nrow(tab), replace = TRUE, prob = c(0.75, 0.25))
+  TabTrain <- tab[sample, ]
+  TabTest <- tab[!sample, ]
+  # model training
+  model <- lm(formula = cons ~ ., data = TabTrain)
+  # compute R Adj
+  R_Squared_Adj[i] <- summary(model)["adj.r.squared"]$adj.r.squared
+  # compute RMSD Train
+  Sum_Of_Square_Train <- sum((TabTrain$cons - predict(model, newdata = TabTrain))^2)
+  RMSD_Train[i] <- sqrt(Sum_Of_Square_Train / length(TabTrain$cons))
+  # compute RMSD Test
+  Sum_Of_Square_Test <- sum((TabTest$cons - predict(model, newdata = TabTest))^2)
+  RMSD_Test[i] <- sqrt(Sum_Of_Square_Test / length(TabTest$cons))
+}
+```
+
+```{r}
+boxplot(RMSD_Train, RMSD_Test, main = "RMSE", names = c("RMSE Train", "RMSE Test"), col = c("royalblue1", "coral1"))
+```

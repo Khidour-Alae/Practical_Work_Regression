@@ -1,0 +1,804 @@
+---
+title: "Practical Work 3 - Regularised Regression Methods"
+author: "Adib Habbou - Alae Khidour"
+date: "07-11-2022"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, comment = NA)
+rm(list=ls())
+graphics.off()
+library(graphics)
+library(ggplot2)
+library(corrplot)
+library(glmnet)
+```
+
+# Data Analysis
+
+## Data Import
+
+```{r}
+diabetes_data <- read.table(file = "diabetes.txt", header = TRUE)
+```
+
+## Data Conversion
+
+```{r}
+YBin <- as.numeric(diabetes_data$Y > median(diabetes_data$Y))
+diabetes_data <- diabetes_data[,-11]
+diabetes_data <- cbind(diabetes_data, YBin)
+```
+
+```{r}
+head(diabetes_data)
+```
+
+```{r}
+tail(diabetes_data)
+```
+
+\newpage
+
+## Data Visualization
+
+```{r, fig.align = "center"}
+pairs(diabetes_data, pch = 22, 
+      bg = c("tomato1","royalblue3")[unclass(factor(diabetes_data[,"YBin"]))])
+```
+
+Red squares correspond to observations where $YBin$ is equal to 0 which means $Y$ is lower than the median.
+
+Blue squares correspond to observations where $YBin$ is equal to 1 which means $Y$ is greater than the median.
+
+From the above plot, we observe the following:
+
+- Colinearity between $S1$ and $S2$
+
+- Above a certain value for $BMI$ and $BP$ we only find blue squares
+
+\newpage
+
+## Study of correlation
+
+```{r, fig.align = "center"}
+corr <- cor(diabetes_data)
+corrplot(corr, method = "circle")
+```
+
+The correlation plot provides us with a lot of information such as:
+
+- S1 and S2 are highly positively correlated;
+
+- S3 and S4 are highly negatively correlated.
+
+We need to keep in mind the correlation between our variables.
+
+The potential colinearity between variables can have an impact on the Standard Error.
+
+More than that, it means that the co-variable signifacitivity test is useless.
+
+\newpage
+
+# Logistic Regression
+
+## Data Partitionning
+
+```{r}
+sample <- sample(c(TRUE, FALSE), nrow(diabetes_data), replace = TRUE, prob = c(0.8, 0.2))
+train_data <- diabetes_data[sample, ]
+test_data <- diabetes_data[!sample, ]
+```
+
+## Application of logistic regression
+
+```{r}
+reg_log = glm(formula = YBin ~ ., family = binomial, data = train_data)
+summary(reg_log)
+```
+
+\newpage
+
+## Interpretation of the results
+
+- For the Deviance Residuals we observe that they are close to be centered on 0 and roughly symmetrical.
+
+- We can make assumptions on the significativity of the co-variables by looking at their p-values. For instance $BMI$ and $S5$ are highly significant co-variables for our model meanwhile $AGE$ and $S4$ are less significant.
+
+- The dispersion parameter in our case is equal to 1, but we can adjust it if we want too. Since we are not estimating the variance from the data instead we are just deriving it from the mean, it is possible that the variance is underestimated.
+
+- The Akaike Information Criterion ($AIC$) will help us to compare between different models.
+
+- The number of Fisher Scoring iterations tells us how quickly the function converges to the maximum likelihood estimated for the coefficients.
+
+## Study of the coefficients
+
+```{r}
+reg_log$coefficients
+```
+
+We should also not only look at the estimated value of the coefficient to determine co-variable significativity because even a very low estimated coefficient can become bigger at the end depending on the co-variable unit and magnitude.
+
+-> The most significant co-variable is $S5$, the less significant co-variable is $AGE$.
+
+But we need to keep in mind that it does not mean that $AGE$ is not significant in reality, it is just the least significant in our model according to the computed p-values for our data set.
+
+\newpage
+
+## Predictions type response
+
+```{r}
+predict_response <- predict.glm(reg_log, newdata = test_data, type = "response")
+predict_response
+```
+
+Using the type $response$ we obtain values between 0 and 1 which correspond to the probability of the variable $YBin$ being equal to 1 computed from the area under the link function.
+
+\newpage
+
+## Predictions type link
+
+```{r}
+predict_link <- predict.glm(reg_log, newdata = test_data, type = "link")
+predict_link
+```
+
+Using the type $link$ we obtain the values of the link function.
+
+\newpage
+
+## Odd-Ratios
+
+```{r}
+exp(coef(reg_log))
+```
+
+From the odd-ratios obtained for each co-variable we can evaluate the influence of the co-variable on the target knowing that:
+
+- When the Odd-Ratio is lower than 1 it means that the co-variable had a negative influence on the target, for instance $AGE$, $SEX$, $S1$, $S3$, $S4$ and $S6$.
+
+- When the Odd-Ratio is greater than 1 it means that the co-variable had a positive influence on the target, for instance $BMI$, $BP$ and $S2$.
+
+The limits of this approach is that if we change the binary labels we had (0 and 1 for our case) we will obtain different values for the estimated coefficients.
+
+## Performance
+
+### MAP
+
+Using the Maximum A Posteriori criteria we can make predictions for our binary variable $YBin$:
+
+```{r}
+prediction <- as.numeric(predict.glm(reg_log, diabetes_data, type = "response") > 0.5)
+```
+
+```{r}
+table(prediction)
+```
+
+Knowing that our target variable have the following values:
+
+```{r}
+table(diabetes_data$YBin)
+```
+
+By comparing the both tables we can tell that our predictions are quite good, since our model has nearly the same count for 0 and 1 than the target variable in our data set.
+
+\newpage
+
+### Confusion Matrix
+
+```{r}
+confusion_matrix <- table(diabetes_data$YBin, prediction)
+confusion_matrix
+```
+
+Here we just computed the confusion matrix for our model. This matrix has 4 values which corresponds respectively to the number of True Negative, False Negative, False Positive and True Positive.
+
+- True Negative is the specificity which is the ability to predict $\hat{YBin} = 0$ for $YBin = 0$
+
+- True Positive is the sensitivity which is ability to predict $\hat{YBin} = 1$ for $YBin = 1$
+
+### Accuracy
+
+```{r}
+accuracy <- (confusion_matrix[1,1] + confusion_matrix[2,2]) / nrow(diabetes_data)
+accuracy
+```
+
+The accuracy of our model correspond to it's ability to predict the right value (0 or 1) for all the observations of our data set. In our case it's equal to $76\,\%$.
+
+### Gloabl Error
+
+```{r}
+global_error <- (confusion_matrix[1,2] + confusion_matrix[2,1]) / nrow(diabetes_data)
+global_error
+```
+
+The global error of our model correspond to it's inability to predict the right value (0 or 1) for all the observations of our data set. In our case it's equal to $24\,\%$.
+
+### Recall
+
+```{r}
+recall <- confusion_matrix[2,2] / (confusion_matrix[1,2] + confusion_matrix[2,2])
+recall
+```
+
+The recall of our model correspond to the correctly predicted positive rate. In our case it's equal to $75\,\%$.
+
+### Precision
+
+```{r}
+precision <- confusion_matrix[2,2] / (confusion_matrix[2,1] + confusion_matrix[2,2])
+precision
+```
+
+The precision correspond to the rate of correct positive predictions. In our case it's equal to $78\,\%$.
+
+### F1-Score
+
+```{r}
+f1_score <- (2 * precision * recall) / (precision + recall)
+f1_score
+```
+
+The F1-score correspond to the ability to predict positive individuals well. In our case it's equal to $76\,\%$.
+
+The $F_\beta$-score uses a more general formula where $\beta$ is chosen such that the recall is considered $\beta$ times as important as the precision:
+
+$$F_\beta = \frac{(1 + \beta^2) * precision * recall}{(\beta^2 * precision) + recall}$$
+
+### False Positive Rate
+
+```{r}
+confusion_matrix[2,1] / nrow(diabetes_data)
+```
+
+The false positive is equal to $11\,\%$.
+
+### False Negative Rate
+
+```{r}
+confusion_matrix[1,2] / nrow(diabetes_data)
+```
+
+The false negative is equal to $13\,\%$.
+
+\newpage
+
+### K-Fold
+
+The Cross-Validation is a technique which simply reserves a part of the training data and uses it to test the model while the remaining non-reserved data is used to train the model.
+
+The principle behind K-Fold cross validation is that we start by dividing our data set into K equal parts. Then we will train our model on the K-1 first parts and use the last part to test the model. Then we will use another combination of parts to train and test our model until we computed all the possible combinations. In the end, every part of the data set is used for testing and we can then have an idea of the performance of our model on new data.
+
+This technique is used to avoid overfitting and to know the performance of our model on new data.   
+
+Here we are coding a function that takes the number of folds and returns a vector of the performance computed at each iteration. The model used here is logistic regression and we are computing the performance by making predictions and computing the confusion matrix
+
+```{r}
+kfold_all <- function(k) # k is here the number of folds
+{
+  # create a vector of length number of folds
+  performance <- vector(length = k)
+  
+  # create a sequence from 1 to k
+  folds <- cut(seq(1,nrow(diabetes_data)), breaks = k, labels = FALSE)
+  
+  # perform k fold cross validation
+  for(i in 1:k)
+  {
+    # split data by fold
+    index <- which(folds == i, arr.ind = TRUE)
+    test_data <- diabetes_data[index,]
+    train_data <- diabetes_data[-index,]
+    
+    # train the logistic regression on the train data set
+    reg_log <- glm(YBin ~ ., family = binomial, data = train_data)
+    
+    # make predictions
+    prediction <- predict(reg_log, test_data)
+    
+    # compute confusion matrix
+    confusion_matrix <- table(as.numeric(prediction > 0.5), diabetes_data[index,]$YBin)
+    
+    # compute the performance
+    performance[i] <- (confusion_matrix[1,1] + confusion_matrix[2,2]) / nrow(test_data)
+  }
+  
+  # returning the vector of performances
+  return (performance)
+}
+```
+
+\newpage
+
+```{r, fig.align = "center"}
+boxplot(kfold_all(6), kfold_all(8), kfold_all(10), 
+        main = "K-Fold", names = c("k = 6", "k = 8", "k = 10"), 
+        col = c("royalblue1", "tomato1", "seagreen"))
+```
+
+In our case we did 3 different K-Folds for K equal to 6, 8 and 10. By looking at the boxplots we can see that the median of our accuracy is around $75\,\%$ with maximum and minimum values that can go from $60\,\%$ to $80\,\%$ for the 10-fold.
+
+# Variable Selection
+
+## Statistical Approach
+
+We start by setting up a model with all the variables and another with only an intercept:
+
+```{r}
+reg_all <- glm(YBin ~., data = diabetes_data, family = binomial)
+reg_none <- glm(YBin ~ 1, data = diabetes_data, family = binomial)
+```
+
+\newpage
+
+### Forward Logistic Regression
+
+```{r}
+reg_forward <- step(reg_none, list(upper = reg_all), direction = 'forward')
+```
+
+We can observe that the forward logistic regression give us a model which contains the following variables: $S5$, $BMI$, $BP$, $S1$, $SEX$ and $S5$ with an AIC equal to $433$.
+
+\newpage
+
+### Backward Logistic Regression
+
+```{r}
+reg_back <- step(reg_all, direction = 'backward')
+```
+
+We can observe that the backward logistic regression give us a model which contains the following variables: $S5$, $BMI$, $BP$, $S1$, $SEX$ and $S5$ with an AIC equal to $433$.
+
+\newpage
+
+### Stepwise Logistic Regression
+
+```{r}
+reg_both <- step(reg_all, direction = 'both')
+```
+
+We can observe that the stepwise logistic regression give us a model which contains the following variables: $S5$, $BMI$, $BP$, $S1$, $SEX$ and $S5$ with an AIC equal to $433$.
+
+\newpage
+
+### Final model
+
+Each time, we obtain the same value for the $AIC$ criteria which equals $433$. We could choose another criteria for our model selection, such as $BIC$ or $C_p$. It could influence our model because the formula we will minimize changes. This formula will depend differently on the number of co-variables $p$. So the choice of criteria will always depend on the business constraint behind. More than that, we can customize our criteria as we want by choosing the value of $\lambda$ in the function $step$.
+
+Our final model will be the following:
+
+```{r}
+diabetes_reg <- lm(formula(reg_both), data = diabetes_data)
+summary(diabetes_reg)
+```
+
+From the summary of our regression we can tell that:
+
+- The residuals are quite symmetrically distributed around their median;
+- The intercept is equal to $-1.962754$, we also notice the influence of each co-variable on Y;
+- The standard error and the t-value are provided to show how the p-values were calculated;
+- ALL the p-values are very low which means that all co-variables are significant;
+- The $R^2$ tells us that the p co-variables can explain $36\,\%$ of the variation in the target variable YBin;
+- The first degree of freedom corresponds to $p - 1$ with $p = 7$ the number of variables of the model;
+- The second degree of freedom corresponds to $n - p$ with $n = 442$ the number of data points.
+
+\newpage
+
+## Penalized Methods
+
+```{r}
+sample <- sample(c(TRUE, FALSE), nrow(diabetes_data), replace = TRUE, prob = c(0.8, 0.2))
+train_data <- diabetes_data[sample, ]
+test_data <- diabetes_data[!sample, ]
+```
+
+## Ridge Regression
+
+### Regularization Path
+
+```{r, fig.align = "center"}
+ridge <- glmnet(x = train_data[,-11], y = train_data$YBin, alpha = 0, family = "binomial")
+plot(ridge, xvar = "lambda", label = TRUE, lwd = 2)
+```
+
+In the plot above, we can see the evolution of the coefficient values depending on $\lambda$ Knowing that we are doing a ridge regression, we can tell that they will all converge to 0. 
+
+However, ridge regression does not perform feature selection and will retain all available features in the final model. Therefore, a ridge model is good if we suppose that there is a need to retain all features in our model yet reduce the noise that less influential variables may create.
+
+If greater interpretation is necessary and many of the features are redundant or irrelevant then a lasso or elastic net penalty may be preferable.
+
+### Cross-Validation
+
+```{r, fig.align = "center"}
+cv_ridge <- cv.glmnet(as.matrix(train_data[,-11]), train_data$YBin, 
+                      family = "binomial", alpha = 0, type.measure = "mse")
+plot(cv_ridge)
+```
+
+In the above plot, we visualize the cross validation curve:
+
+- $\lambda_{min}$ is the value which minimizes the Mean Squared Error in Cross-Validation;
+
+- $\lambda_{1se}$ is the value which is the largest $\lambda$ value within 1 standard error;
+
+- The intervals estimate variance of the loss metric (red points) using Cross-Validation;
+
+- The vertical lines show the locations of $\lambda_{min}$ and $\lambda_{1se}$;
+
+- The numbers across the top are the number of non-zero coefficients.
+
+We observe a slight improvement in the Mean Squared Error as our penalty $log(\lambda)$ gets larger, suggesting that a regular OLS model likely overfits the training data. But as we constrain it further by continuing to increase the penalty of our Mean Squared Error starts to increase.
+
+\newpage
+
+### Lambda Min
+
+```{r}
+lambda_min <- cv_ridge$lambda.min
+ridge_min <- glmnet(x = train_data[,-11], y = train_data$YBin, 
+                    alpha = 0, family = "binomial", lambda = lambda_min)
+ridge_min$beta
+```
+
+The model obtained using $\lambda_{min}$ gives us the model with lowest Mean Squared Error, which can seem to be a good choice but in fact it can implies overfitting.
+
+```{r}
+prediction_min <- as.numeric(
+  predict(ridge_min, as.matrix(diabetes_data[,-11]), type = "response") > 0.5)
+```
+
+Using the Maximum A Posteriori criteria we can make predictions for our binary variable $YBin$:
+
+```{r}
+table(prediction_min)
+```
+
+By comparing with the table of the target variable we can tell that our predictions are quite consistent, since our model has nearly the same count for 0 and 1 than the target variable in our data set.
+
+```{r}
+confusion_matrix <- table(diabetes_data$YBin, prediction_min)
+confusion_matrix
+```
+
+```{r}
+accuracy <- (confusion_matrix[1,1] + confusion_matrix[2,2]) / nrow(diabetes_data)
+accuracy
+```
+
+The accuracy is equal to $76.2\,\%$.
+
+\newpage
+
+### Lambda 1se
+
+```{r}
+lambda_1se <- cv_ridge$lambda.1se
+ridge_1se <- glmnet(x = train_data[,-11], y = train_data$YBin, 
+                    alpha = 0, family = "binomial", lambda = lambda_1se)
+ridge_1se$beta
+```
+
+The model obtained using $\lambda_{1se}$ gives us a simpler model which can avoid overfitting.
+
+```{r}
+prediction_1se <- as.numeric(
+  predict(ridge_1se, as.matrix(diabetes_data[,-11]), type = "response") > 0.5)
+```
+
+Using the Maximum A Posteriori criteria we can make predictions for our binary variable $YBin$:
+
+```{r}
+table(prediction_1se)
+```
+
+By comparing with the table of the target variable we can tell that our predictions are quite consistent, since our model has nearly the same count for 0 and 1 than the target variable in our data set.
+
+```{r}
+confusion_matrix <- table(diabetes_data$YBin, prediction_1se)
+confusion_matrix
+```
+
+```{r}
+accuracy <- (confusion_matrix[1,1] + confusion_matrix[2,2]) / nrow(diabetes_data)
+accuracy
+```
+
+The accuracy is equal to $76.6\,\%$.
+
+### K-Fold function
+
+Let's code a function that will take not only the number of folds but also the lambda so we can use it for both values of $\lambda_{min}$ and $\lambda_{1se}$ in our ridge regression model.
+
+```{r}
+kfold_ridge <- function(k, lambda)
+{
+  # create a vector of length number of folds
+  performance <- vector(length = k)
+  
+  # create a sequence from 1 to k
+  folds <- cut(seq(1,nrow(diabetes_data)), breaks = k, labels = FALSE)
+  
+  # perform 10 fold cross validation
+  for(i in 1:k)
+  {
+    # split data by fold
+    index <- which(folds == i, arr.ind = TRUE)
+    test_data <- diabetes_data[index,]
+    train_data <- diabetes_data[-index,]
+    
+    # train the logistic regression on the train data set
+    reg_log <- glmnet(x = train_data[,-11], y = train_data$YBin, 
+                      alpha = 0, family = "binomial", lambda = lambda)
+    
+    # make predictions
+    prediction <- as.numeric(
+      predict(reg_log, as.matrix(test_data[,-11]), type = "response") > 0.5)
+    confusion_matrix <- table(prediction, test_data$YBin)
+    
+    # compute the performance
+    performance[i] <- (confusion_matrix[1,1] + confusion_matrix[2,2]) / nrow(test_data)
+  }
+  
+  # returning the vector of performances
+  return (performance)
+}
+```
+
+\newpage
+
+### K-Fold boxplots
+
+```{r, fig.align = "center"}
+boxplot(kfold_ridge(10, lambda_min), kfold_ridge(10, lambda_1se), main = "K-Fold", 
+        names = c("lambda_min", "lambda_1se"), col = c("royalblue1", "tomato1"))
+```
+
+In our case we did two 10-Folds with $\lambda_{min}$ and $\lambda_{1se}$. By looking at the boxplots we can see that the median of our accuracy in between $75\,\%$ and  $80\,\%$ for the two models. But we can clearly observe that the box for $\lambda_{1se}$ is higher than the one for $\lambda_{min}$ which means in generally we will have a better accuracy by using $\lambda_{1se}$. More than that, we know that with $\lambda_{1se}$ we are having a larger penalization than with $\lambda_{min}$ which explains why we have a larger interquartile range and a larger distance between the minmum and the maximum.
+
+\newpage
+
+## Lasso Regression
+
+### Regularization Path
+
+```{r, fig.align = "center"}
+lasso <- glmnet(x = train_data[,-11], y = train_data$YBin, alpha = 1, family = "binomial")
+plot(lasso, xvar = "lambda", label = TRUE, lwd = 2)
+```
+
+In the plot above, we can see the evolution of the coefficient values depending on $\lambda$ Knowing that we are doing a lasso regression, we can tell that they will all converge to 0 one by one and not all at the same time.
+
+When a data set has many co-variables, lasso can be used to identify and extract those co-variables which are the most significant. Switching to the lasso penalty also conducts automated variable selection.
+
+\newpage
+
+### Cross-Validation
+
+```{r, fig.align = "center"}
+cv_lasso <- cv.glmnet(as.matrix(train_data[,-11]), train_data$YBin, 
+                      family = "binomial", alpha = 1, type.measure = "mse")
+plot(cv_lasso)
+```
+
+We observe a slight improvement in the Mean Squared Error as our penalty $log(\lambda)$ gets larger, suggesting that a regular OLS model likely overfits the training data. But as we constrain it further by continuing to increase the penalty our Mean Squared Error starts to increase.
+
+\newpage
+
+### Lambda Min
+
+```{r}
+lambda_min <- cv_lasso$lambda.min
+lasso_min <- glmnet(x = train_data[,-11], y = train_data$YBin, 
+                    alpha = 1, family = "binomial", lambda = lambda_min)
+lasso_min$beta
+```
+
+The model obtained using $\lambda_{min}$ gives us the model with lowest Mean Squared Error, which can seem to be a good choice but in fact it can implies overfitting. We observe that the model does not contain $AGE$, $S2$ and $S4$.
+
+```{r}
+prediction_min <- as.numeric(
+  predict(lasso_min, as.matrix(diabetes_data[,-11]), type = "response") > 0.5)
+```
+
+Using the Maximum A Posteriori criteria we can make predictions for our binary variable $YBin$:
+
+```{r}
+table(prediction_min)
+```
+
+By comparing with the table of the target variable we can tell that our predictions are quite consistent, since our model has nearly the same count for 0 and 1 than the target variable in our data set.
+
+```{r}
+confusion_matrix <- table(diabetes_data$YBin, prediction_min)
+confusion_matrix
+```
+
+```{r}
+accuracy <- (confusion_matrix[1,1] + confusion_matrix[2,2]) / nrow(diabetes_data)
+accuracy
+```
+
+The accuracy is equal to $76.5\,\%$.
+
+\newpage
+
+### Lambda 1se
+
+```{r}
+lambda_1se <- cv_lasso$lambda.1se
+lasso_1se <- glmnet(x = train_data[,-11], y = train_data$YBin, 
+                    alpha = 1, family = "binomial", lambda = lambda_1se)
+lasso_1se$beta
+```
+
+The model obtained using $\lambda_{1se}$ gives us a simpler model which can avoid overfitting. We observe that the model does not contain $AGE$, $S1$, $S2$, $S4$ and $S6$, so the model is simpler than the one with $\lambda_{min}$.
+
+```{r}
+prediction_1se <- as.numeric(
+  predict(lasso_1se, as.matrix(diabetes_data[,-11]), type = "response") > 0.5)
+```
+
+Using the Maximum A Posteriori criteria we can make predictions for our binary variable $YBin$:
+
+```{r}
+table(prediction_1se)
+```
+
+By comparing with the table of the target variable we can tell that our predictions are quite consistent, since our model has nearly the same count for 0 and 1 than the target variable in our data set.
+
+```{r}
+confusion_matrix <- table(diabetes_data$YBin, prediction_1se)
+confusion_matrix
+```
+
+```{r}
+accuracy <- (confusion_matrix[1,1] + confusion_matrix[2,2]) / nrow(diabetes_data)
+accuracy
+```
+
+The accuracy is equal to $74.8\,\%$.
+
+\newpage
+
+### K-Fold function
+
+Let's code a function that will take not only the number of folds but also the lambda so we can use it for both values of $\lambda_{min}$ and $\lambda_{1se}$ in our ridge lasso model.
+
+```{r}
+kfold_lasso <- function(k, lambda)
+{
+  # create a vector of length number of folds
+  performance <- vector(length = k)
+  
+  # create a sequence from 1 to k
+  folds <- cut(seq(1,nrow(diabetes_data)), breaks = k, labels = FALSE)
+  
+  # perform 10 fold cross validation
+  for(i in 1:k)
+  {
+    # split data by fold
+    index <- which(folds == i, arr.ind = TRUE)
+    test_data <- diabetes_data[index,]
+    train_data <- diabetes_data[-index,]
+    
+    # train the logistic regression on the train data set
+    reg_log <- glmnet(x = train_data[,-11], y = train_data$YBin, 
+                      alpha = 1, family = "binomial", lambda = lambda)
+    
+    # make predictions
+    prediction <- as.numeric(
+      predict(reg_log, as.matrix(test_data[,-11]), type = "response") > 0.5)
+    
+    confusion_matrix <- table(prediction, test_data$YBin)
+    # compute the performance
+    performance[i] <- (confusion_matrix[1,1] + confusion_matrix[2,2]) / nrow(test_data)
+  } 
+  # returning the vector of performances
+  return (performance)
+}
+```
+
+We could code a function that takes not only the number of folds and the lambda but also the alpha which will be equal to $0$ for a ridge regression and $1$ for a lasso regression.
+
+\newpage
+
+### K-Fold boxplots
+
+```{r, fig.align = "center"}
+boxplot(kfold_lasso(10, lambda_min), kfold_lasso(10, lambda_1se), main = "K-Fold", 
+        names = c("lambda_min", "lambda_1se"), col = c("royalblue1", "tomato1"))
+```
+
+In our case we did two 10-Folds with $\lambda_{min}$ and $\lambda_{1se}$. By looking at the boxplots we can see that the median of our accuracy in between $75\,\%$ and  $80\,\%$ for the two models. But we can clearly observe that the box for $\lambda_{1se}$ is higher than the one for $\lambda_{min}$ which means in generally we will have a better accuracy by using $\lambda_{1se}$. More than that, we know that with $\lambda_{1se}$ we are having a larger penalization than with $\lambda_{min}$ which explains why we have a larger interquartile range and a larger distance between the minimum and the maximum.
+
+\newpage
+
+# Conclusion
+
+Let's compare the accuracy of all the models obtained using a K-Fold procedure for Cross Validation.
+
+In order to do that let's code a function to make k-fold on the null and the step-wise model.
+
+```{r}
+kfold_none <- function(k) # k is here the number of folds
+{
+  # create a vector of length number of folds
+  performance <- vector(length = k)
+  # create a sequence from 1 to k
+  folds <- cut(seq(1,nrow(diabetes_data)), breaks = k, labels = FALSE)
+  # perform k fold cross validation
+  for(i in 1:k)
+  {
+    # split data by fold
+    index <- which(folds == i, arr.ind = TRUE)
+    test_data <- diabetes_data[index,]
+    train_data <- diabetes_data[-index,]
+    # train the logistic regression on the train data set
+    reg_log <- glm(YBin ~ 1, family = binomial, data = train_data)
+    # make predictions
+    prediction <- predict(reg_log, test_data)
+    # compute confusion matrix and performance
+    confusion_matrix <- table(as.numeric(prediction > 0.5), diabetes_data[index,]$YBin)
+    performance[i] <- confusion_matrix[1,2] / nrow(test_data)
+  }
+  return (performance)
+}
+```
+
+```{r}
+kfold_step <- function(k) # k is here the number of folds
+{
+  # create a vector of length number of folds
+  performance <- vector(length = k)
+  # create a sequence from 1 to k
+  folds <- cut(seq(1,nrow(diabetes_data)), breaks = k, labels = FALSE)
+  # perform k fold cross validation
+  for(i in 1:k)
+  {
+    # split data by fold
+    index <- which(folds == i, arr.ind = TRUE)
+    test_data <- diabetes_data[index,]
+    train_data <- diabetes_data[-index,]
+    # train the logistic regression on the train data set
+    reg_log <- step(glm(YBin ~ ., family = binomial, data = train_data),
+                    direction = "both", trace = FALSE)
+    # make predictions
+    prediction <- predict(reg_log, test_data)
+    # compute confusion matrix and performance
+    confusion_matrix <- table(as.numeric(prediction > 0.5), diabetes_data[index,]$YBin)
+    performance[i] <- (confusion_matrix[1,1] + confusion_matrix[2,2]) / nrow(test_data)
+  }
+  return (performance)
+}
+```
+
+\newpage
+
+```{r, fig.align = "center"}
+boxplot(kfold_none(10), kfold_all(10), kfold_step(10),
+        kfold_ridge(10, cv_ridge$lambda.min), kfold_lasso(10, cv_lasso$lambda.min),
+        main = "10-Fold for 5 different models", 
+        names = c("Null", "Full", "Stepwise", "Ridge Min", "Lasso Min"),
+        col = c("mediumorchid3", "royalblue3", "tomato1", "goldenrod2", "seagreen"))
+```
+
+By looking at the boxplots we can compare between all the models we did in this practical work:
+
+- We can notice the presence of outliers;
+
+- The Null model has the lowest accuracy because he doesn't take in count any co-variables;
+
+- The Stepwise model has a very small minimum value which is near to the median of the Null model;
+
+- The Full and Stepwise models have a better accuracy than the Null model but their median are lower than the median for Ridge and Lasso, we can explain that by the fact that Ridge and Lasso are applying penalization in order to avoid overfitting so it has a better predictive power on new data set which is the case when doing K-Fold Cross Validation;
+
+- For Ridge and Lasso we can clearly see that they have the best accuracy but we can observe than the interquartile range and the distance between min and max values are larger for Ridge than for Lasso because Lasso does variable selection. Generally, when we have many small or medium sized effects we should go with Ridge. If we have only a few variables with a medium or large effect, we should go with Lasso;
+
+- "Ridge regression does a proportional shrinkage. Lasso translates each coefficient by a constant factor, truncating at zero." from **The Elements of Statistical Learning: Data Mining, Inference, and Prediction. Hastie, Tibshirani, Friedman**.
+
+
+
+

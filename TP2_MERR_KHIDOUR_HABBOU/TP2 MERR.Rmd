@@ -1,0 +1,260 @@
+---
+title: "TP2 MERR"
+author: "Adib Habbou"
+date: "2022-10-03"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, comment = NA)
+rm(list=ls())
+graphics.off()
+library(ggplot2)
+library(matlib)
+library(leaps)
+library(corrplot)
+library(ggcorrplot)
+library(lars)
+library(MASS)
+```
+
+# Tests of significativity and model selection
+
+## Question a
+
+```{r}
+n = 100
+X = cbind(((1:n)/n)^3, (((1:n)/n)^4))
+Y = X %*% c(1,1) + rnorm(n)/4
+res = summary(lm(Y~X))
+print(res)
+print(res$coef[2,4])
+```
+
+```{r}
+reg1=lm(Y~X[,1])
+print(summary(reg1))
+```
+
+```{r}
+reg2=lm(Y~X[,2])
+print(summary(reg2))
+```
+
+```{r}
+cor(X[,1],X[,2])
+```
+
+# Model selection in a linear regression framework
+
+```{r}
+USCrime <- read.table("USCrime.txt", header = TRUE)
+head(USCrime)
+```
+
+```{r}
+nrow(USCrime)
+```
+
+```{r}
+plot(USCrime)
+```
+
+```{r}
+corrplot(cor(USCrime), method = "color")
+```
+
+## Multiple regression model
+
+```{r}
+reg = lm(formula = R ~ ., data = USCrime)
+```
+
+```{r}
+summary(reg)
+```
+
+The p-value of the linear model is below $10^{-6}$ so the model globally have an interest.
+
+```{r}
+USCrime_Pred <- predict(reg)
+RSS <- 0
+for (i in 1:nrow(USCrime))
+{
+  RSS <- RSS + (USCrime$R[i] - USCrime_Pred[i])^2
+}
+as.double(RSS)
+```
+
+## Model selection
+
+```{r}
+regbackward = step(reg, direction = "backward")
+summary(regbackward)
+```
+
+```{r}
+regforward = step(lm(R ~ 1, data = USCrime), list(upper = reg), direction = 'forward')
+summary(regforward)
+```
+
+```{r}
+regboth = step(reg, direction = "both")
+summary(regboth)
+```
+
+```{r}
+s0 <- step(reg, direction = 'both')
+```
+
+
+```{r}
+reg0 = lm(formula(s0), data = USCrime)
+summary(reg0)
+```
+
+# RIDGE and LASSO penalized regression
+
+## Simulated data
+
+```{r}
+rm(list=ls())
+n = 10000
+p = 5
+X = matrix(rnorm(n*(p)),nrow=n,ncol=p)
+X = scale(X)*sqrt(n/(n-1))
+beta = matrix(10*rev(1:p),nrow=p,ncol=1)
+print(beta)
+```
+
+```{r}
+epsi=rnorm(n, 1/n^2)
+Y=X%*%beta +epsi
+Z=cbind(Y,data.frame(X))
+Z=data.frame(Z)
+```
+
+```{r}
+model <- lm(formula = Y ~ X1 + X2 + X3 + X4 + X5, data = Z)
+summary(model)
+```
+
+```{r}
+t(X) %*% Y
+```
+
+```{r}
+modlasso <- lars(X, Y, type = "lasso")
+attributes(modlasso)
+```
+
+```{r}
+mean(X[1,])
+```
+
+
+```{r}
+modlasso$meanx
+```
+
+```{r}
+modlasso$normx
+```
+
+```{r}
+par(mfrow=c(1,2))
+plot(modlasso)
+plot(c(modlasso$lambda,0),pch=16,type="b",col="blue")
+grid()
+```
+
+```{r}
+print(coef(modlasso))
+```
+
+
+```{r}
+coef = predict.lars(modlasso, X, type = "coefficients", mode = "lambda", s = 2500)
+coeflasso = coef$coefficients
+barplot(coeflasso, main = 'lasso, l=1', col = 'cyan')
+```
+
+## Application
+
+```{r}
+usa_indicators <- read.table("usa_indicators.txt", header = TRUE, sep =";")
+head(usa_indicators)
+```
+
+```{r}
+dim(usa_indicators)
+```
+
+```{r}
+plot(x = usa_indicators$Year, y = usa_indicators$EN.ATM.CO2E.KT)
+```
+
+```{r}
+co2_model <- lm(formula = EN.ATM.CO2E.KT ~ ., data = as.data.frame(scale(usa_indicators, center = FALSE)))
+summary(co2_model)
+```
+
+## Ridge Regression L2 penalization
+
+```{r}
+resridge <- lm.ridge(formula = EN.ATM.CO2E.KT ~ . - Year, data = usa_indicators, lambda = 0)
+head(sort(coef(resridge), decreasing = TRUE))
+```
+
+```{r}
+resridge <- lm.ridge(formula = EN.ATM.CO2E.KT ~ . - Year, data = usa_indicators, lambda = 100)
+head(sort(coef(resridge), decreasing = TRUE))
+```
+
+```{r}
+head(coef(resridge))
+```
+
+```{r}
+head(resridge$coef)
+```
+
+```{r}
+resridge <- lm.ridge(formula = EN.ATM.CO2E.KT ~ . - Year, data = usa_indicators, lambda = seq(0,10,0.01))
+plot(resridge$GCV)
+```
+
+```{r}
+plot(resridge)
+```
+
+```{r}
+indexlambda <- which.min(resridge$GCV)
+coefridge <- coef(lm.ridge(formula = EN.ATM.CO2E.KT ~ . - Year, data = usa_indicators,lambda = resridge$GCV[indexlambda]))
+data.frame(coefridge)
+```
+
+```{r}
+reslasso <- lars(X, Y, type = "lasso")
+```
+
+```{r}
+plot(reslasso)
+```
+
+```{r}
+plot(reslasso$lambda)
+```
+
+```{r}
+X <- scale(X)
+coef <- predict.lars(reslasso, X, type = "fit", mode = "lambda", s = 0)
+```
+
+```{r}
+usa_no_year <- subset(usa_indicators, select=-Year)
+pY <- predict.lars(reslasso, X, type = "fit", mode = "lambda", s=0.06)
+sum((usa_no_year$EN.ATM.CO2E.KT - pY$fit)^2)/14
+```
+
+

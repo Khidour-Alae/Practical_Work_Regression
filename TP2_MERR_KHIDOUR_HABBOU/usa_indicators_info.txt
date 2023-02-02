@@ -1,0 +1,116 @@
+Dataset source: http://data.worldbank.org/country/united-states
+
+Description:
+This dataset contains development indicators (economic, demographic and sociologic) in the United States for a period of 14 years (1996 - 2009).
+
+Variable names:
+
+AG.AGR.TRAC.NO		Agricultural machinery, tractors
+AG.LND.AGRI.K2		Agricultural land (sq. km)
+AG.LND.CREL.HA		Land under cereal production (hectares)
+AG.LND.TOTL.K2		Land area (sq. km)
+AG.PRD.CREL.MT		Cereal production (metric tons)
+AG.PRD.FOOD.XD		Food production index (2004-2006 = 100)
+AG.PRD.LVSK.XD		Livestock production index (2004-2006 = 100)
+AG.SRF.TOTL.K2		Surface area (sq. km)
+EG.EGY.PROD.KT.OE	Energy production (kt of oil equivalent)
+EG.ELC.COAL.KH		Electricity production from coal sources (kWh)
+EG.ELC.HYRO.KH		Electricity production from hydroelectric sources (kWh)
+EG.ELC.LOSS.KH		Electric power transmission and distribution losses (kWh)
+EG.ELC.NGAS.KH		Electricity production from natural gas sources (kWh)
+EG.ELC.NUCL.KH		Electricity production from nuclear sources (kWh)
+EG.ELC.PETR.KH		Electricity production from oil sources (kWh)
+EG.ELC.PROD.KH		Electricity production (kWh)
+EG.ELC.RNEW.KH		Electricity production from renewable sources (kWh)
+EG.IMP.CONS.ZS		Energy imports, net (% of energy use)
+EG.USE.COMM.FO.ZS	Fossil fuel energy consumption (% of total)
+EG.USE.COMM.KT.OE	Energy use (kt of oil equivalent)
+EN.ATM.CO2E.KT		CO2 emissions (kt)
+EN.CO2.BLDG.MT		CO2 emissions from residential buildings and commercial and public services (million metric tons)
+EN.POP.DNST		Population density (people per sq. km of land area)
+EN.URB.LCTY		Population in largest city
+FD.AST.PRVT.GD.ZS	Domestic credit to private sector by banks (% of GDP)
+FI.RES.TOTL.CD		Total reserves (includes gold, current US$)
+FM.AST.DOMS.CN		Net domestic credit (current LCU)
+FM.LBL.MONY.CN		Money (current LCU)
+FP.CPI.TOTL		Consumer price index (2010 = 100)
+FP.CPI.TOTL.ZG		Inflation, consumer prices (annual %)
+FR.INR.LEND		Lending interest rate (%)
+FR.INR.RINR		Real interest rate (%)
+IP.JRN.ARTC.SC		Scientific and technical journal articles
+IP.PAT.NRES		Patent applications, nonresidents
+IP.PAT.RESD		Patent applications, residents
+IP.TMK.TOTL		Trademark applications, total
+IS.AIR.PSGR		Air transport, passengers carried
+IS.ROD.ENGY.KT		Road sector energy consumption (kt of oil equivalent)
+IS.ROD.SGAS.KT		Road sector gasoline fuel consumption (kt of oil equivalent)
+IT.MLT.MAIN		Telephone lines
+MS.MIL.MPRT.KD		Arms imports (SIPRI trend indicator values)
+MS.MIL.TOTL.P1		Armed forces personnel, total
+MS.MIL.TOTL.TF.ZS	Armed forces personnel (% of total labor force)
+MS.MIL.XPND.CN		Military expenditure (current LCU)
+MS.MIL.XPRT.KD		Arms exports (SIPRI trend indicator values)
+NE.CON.GOVT.CD		General government final consumption expenditure (current US$)
+NE.CON.PETC.CD		Household final consumption expenditure, etc. (current US$)
+NE.DAB.TOTL.CD		Gross national expenditure (current US$)
+NE.EXP.GNFS.CD		Exports of goods and services (current US$)
+NE.TRD.GNFS.ZS		Trade (% of GDP)
+NY.GDP.DEFL.KD.ZG	Inflation, GDP deflator (annual %)
+NY.GDP.FRST.RT.ZS	Forest rents (% of GDP)
+NY.GDP.TOTL.RT.ZS	Total natural resources rents (% of GDP)
+NY.GDS.TOTL.CD		Gross domestic savings (current US$)
+NY.GSR.NFCY.CD		Net income from abroad (current US$)
+NY.TRF.NCTR.CD		Net current transfers from abroad (current US$)
+SE.ENR.TERT.FM.ZS	Ratio of female to male tertiary enrollment (%)
+SE.PRE.ENRR		School enrollment, preprimary (% gross)
+SE.PRE.ENRR.FE		School enrollment, preprimary, female (% gross)
+SE.PRM.ENRL		Primary education, pupils
+SE.PRM.ENRL.FE.ZS	Primary education, pupils (% female)
+SE.PRM.ENRL.TC.ZS	Pupil-teacher ratio, primary
+SE.PRM.ENRR		School enrollment, primary (% gross)
+SE.PRM.NENR		School enrollment, primary (% net)
+SE.PRM.PRIV.ZS		School enrollment, primary, private (% of total primary)
+SE.PRM.UNER		Children out of school, primary
+SE.SEC.ENRL		Secondary education, pupils
+SE.TER.ENRR		School enrollment, tertiary (% gross)
+SE.XPD.TOTL.GB.ZS	Public spending on education, total (% of government expenditure)
+SH.DTH.IMRT		Number of infant deaths
+SH.DTH.MORT		Number of under-five deaths
+SH.DYN.MORT		Mortality rate, under-5 (per 1,000 live births)
+SH.MED.BEDS.ZS		Hospital beds (per 1,000 people)
+SL.EMP.SELF.ZS		Self-employed, total (% of total employed)
+SL.UEM.TOTL.NE.ZS	Unemployment, total (% of total labor force) (national estimate)
+SP.ADO.TFRT		Adolescent fertility rate (births per 1,000 women ages 15-19)
+SP.DYN.AMRT.FE		Mortality rate, adult, female (per 1,000 female adults)
+SP.DYN.AMRT.MA		Mortality rate, adult, male (per 1,000 male adults)
+SP.DYN.CBRT.IN		Birth rate, crude (per 1,000 people)
+SP.DYN.CDRT.IN		Death rate, crude (per 1,000 people)
+SP.DYN.LE00.IN		Life expectancy at birth, total (years)
+SP.POP.0014.TO.ZS	Population ages 0-14 (% of total)
+SP.POP.1564.TO.ZS	Population ages 15-64 (% of total)
+SP.POP.65UP.TO.ZS	Population ages 65 and above (% of total)
+SP.POP.GROW		Population growth (annual %)
+SP.POP.SCIE.RD.P6	Researchers in R&D (per million people)
+SP.POP.TOTL		Population, total
+SP.RUR.TOTL		Rural population
+SP.URB.TOTL		Urban population
+TG.VAL.TOTL.GD.ZS	Merchandise trade (% of GDP)
+TM.VAL.AGRI.ZS.UN	Agricultural raw materials imports (% of merchandise imports)
+TM.VAL.FOOD.ZS.UN	Food imports (% of merchandise imports)
+TM.VAL.FUEL.ZS.UN	Fuel imports (% of merchandise imports)
+TM.VAL.MANF.ZS.UN	Manufactures imports (% of merchandise imports)
+TM.VAL.MMTL.ZS.UN	Ores and metals imports (% of merchandise imports)
+TM.VAL.MRCH.AL.ZS	Merchandise imports from economies in the Arab World (% of total merchandise imports)
+TM.VAL.MRCH.CD.WT	Merchandise imports (current US$)
+TM.VAL.MRCH.HI.ZS	Merchandise imports from high-income economies (% of total merchandise imports)
+TM.VAL.MRCH.OR.ZS	Merchandise imports from developing economies outside region (% of total merchandise imports)
+TM.VAL.MRCH.R1.ZS	Merchandise imports from developing economies in East Asia & Pacific (% of total merchandise imports)
+TM.VAL.MRCH.R3.ZS	Merchandise imports from developing economies in Latin America & the Caribbean (% of total merchandise imports)
+TM.VAL.MRCH.R4.ZS	Merchandise imports from developing economies in Middle East & North Africa (% of total merchandise imports)
+TM.VAL.MRCH.R5.ZS	Merchandise imports from developing economies in South Asia (% of total merchandise imports)
+TM.VAL.MRCH.R6.ZS	Merchandise imports from developing economies in Sub-Saharan Africa (% of total merchandise imports)
+TX.VAL.AGRI.ZS.UN	Agricultural raw materials exports (% of merchandise exports)
+TX.VAL.FOOD.ZS.UN	Food exports (% of merchandise exports)
+TX.VAL.FUEL.ZS.UN	Fuel exports (% of merchandise exports)
+TX.VAL.MANF.ZS.UN	Manufactures exports (% of merchandise exports)
+TX.VAL.MMTL.ZS.UN	Ores and metals exports (% of merchandise exports)

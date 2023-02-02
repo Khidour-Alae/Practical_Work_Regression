@@ -1,0 +1,467 @@
+---
+title: "Practical Work 2 - Regularised Regression Methods"
+author: "Adib Habbou - Alae Khidour"
+date: "24-10-2022"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, comment = NA)
+rm(list=ls())
+graphics.off()
+library(ggplot2)
+library(corrplot)
+library(MASS)
+library(broom)
+library(lars)
+```
+
+# Data Import
+
+```{r}
+diabetes_data <- read.table(file = "diabetes.txt",header = TRUE)
+dim(diabetes_data)
+```
+
+```{r}
+head(diabetes_data, 10)
+```
+
+```{r}
+tail(diabetes_data, 10)
+```
+
+# Study of correlation
+
+First, let's look at the correlation between our variables by plotting the matrix:
+
+```{r}
+corr <- cor(diabetes_data)
+corrplot(corr, method = "circle")
+```
+
+The correlation plot provides us with a lot of information such as:
+
+* S1 and S2 are highly positively correlated;
+
+* S3 and S4 are highly negatively correlated.
+
+We need to keep in mind the correlation between our variables.
+
+The potential colinearity between variables can have an impact on the Standard Error.
+
+More than that, it means that the co-variable signifacitivity test is useless.
+
+\newpage
+
+# Multiple Regression
+
+```{r}
+diabetes_model <- lm(formula = Y ~ ., data = diabetes_data)
+summary(diabetes_model)
+```
+
+As we have seen in the previous practical work, the multiple regression model doesn't give us satisfying results. To have a better a model we need to do some variable selection.
+
+In order to do that we have two main ways:
+
+* Greedy Methods such as forward, backward and stepwise;
+
+* Maximization of penalized log-likelihood using AIC, BIC...
+
+Let's try both of the methods and look at the results.
+
+\newpage
+
+# Greedy Methods
+
+## Backward Regerssion
+
+```{r}
+diabetes_backward <- step(diabetes_model, direction = "backward")
+```
+
+\newpage
+
+## Backward Regression Summary
+
+```{r}
+summary(diabetes_backward)
+```
+
+\newpage
+
+## Forward Regression
+
+```{r}
+diabetes_forward <- step(lm(Y ~ 1, data = diabetes_data),
+                         list(upper = diabetes_model),
+                         direction = "forward")
+```
+
+\newpage
+
+## Forward Regerssion Summary
+
+```{r}
+summary(diabetes_forward)
+```
+
+\newpage
+
+## Stepwise Regression
+
+```{r}
+diabetes_both <- step(diabetes_model, direction = "both")
+```
+
+\newpage
+
+## Stepwise Regression Summary
+
+```{r}
+summary(diabetes_both)
+```
+
+\newpage
+
+## Interpretation of Greedy Methods
+
+We can observe that the 3 methods give us the same model which contains the following variables:
+
+* SEX;
+
+* BMI;
+
+* BP;
+
+* S1;
+
+* S2;
+
+* S5.
+
+Each time, we obtain the same value for the $AIC$ criteria which equals $3534.26$. We could choose another criteria for our model selection, such as $BIC$ or $C_p$. It could influence our model because the formula we will minimize changes. This formula will depend differently on the number of co-variables $p$. So the choice of criteria will always depend on the business constraint behind. More than that, we can customize our criteria as we want by choosing the value of $\lambda$ in the function $step$.
+
+Our final model will be the following:
+
+```{r}
+diabetes_reg <- lm(formula(diabetes_both), data = diabetes_data)
+summary(diabetes_reg)
+```
+
+\newpage
+
+## Study of Quantiles
+
+```{r}
+ggplot(data = diabetes_data, mapping = aes(sample = Y)) +
+  stat_qq(size = 1.5, color = "royalblue3") +
+  stat_qq_line(size = 1, color = "tomato1") +
+  labs(title = "Quantile-Quantile Graph", 
+       x = "Theoretical Quantiles", y = "Sample Quantiles") +
+  theme(plot.title = element_text(hjust = 0.5))
+```
+
+The quantiles are values dividing a probability distribution into equal intervals, with every interval having
+the same fraction of the total population.
+
+The purpose of the Quantile-Quantile plot is to show if two data sets come from the same distribution. Plotting the first data set’s quantiles along the x-axis and plotting the second data set’s quantiles along the y-axis is how the plot is constructed. When looking at the QQ plot, we see the points match up along a straight line which shows that the quantiles
+match or not.
+
+In our case, we are comparing two probability distributions by plotting their quantiles against each other. They fit the y = x line so we can assume that the two distributions are for values between $1$ and $-1$. So, the linear model is the right model to use in this situation.
+
+However, for extreme values the points are a little bit far from the first bisector which means that the distributions may not be as similar as we assume, especially for the extreme values.
+
+\newpage
+
+## Study of Predictions
+
+```{r}
+bivariate_data <- as.data.frame(cbind(diabetes_data$Y, predict(diabetes_backward)))
+ggplot(data = bivariate_data, mapping = aes(x = V1, y = V2)) +
+  geom_point(size = 1.2, color = "royalblue3") +
+  geom_abline(size = 1.3, color = "tomato1") +
+  labs(title = "Comparison between real and predicted values",
+       x = "Real Values", y = "Predicted Values") +
+  xlim(0, 350) + ylim(0, 350) +
+  theme(plot.title = element_text(hjust = 0.5))
+```
+
+Plotting the values predicted by our model against the real values of our data set provides us information about how good are the predictions of our model.
+
+By looking at the above figure, we can tell that the predicted values are close to the real ones because they are all stacked around the red line within a certain surface which corresponds to the error.
+
+\newpage
+
+## Study of Residuals
+
+```{r}
+residuals <- as.data.frame(diabetes_reg$residuals)
+ggplot(data = residuals, 
+       mapping = aes(x = seq(1, nrow(residuals)), y = diabetes_reg$residuals)) +
+  geom_point(size = 1.5, color = "royalblue3") +
+  geom_hline(yintercept = 0, size = 1.3, color = "tomato1") +
+  labs(title = "Residual Graph", x = "Target Values", y = "Quadratic Error") +
+  theme(plot.title = element_text(hjust = 0.5))
+```
+
+If the residuals are randomly scattered around the residual = 0, it means that a linear model approximates the data points well without favoring certain inputs. In such a case, we conclude that a linear model is appropriate. By looking at the plot above, we can tell that the distribution of points is random, so there is no more information to capture from the residuals.
+
+\newpage
+
+## Random Partitionning
+
+```{r}
+R_Squared_Adj <- RMSD_Train <- RMSD_Test <- vector(length = 100)
+```
+
+```{r}
+for (i in 1:100)
+{
+  # train and test split
+  sample <- sample(c(TRUE, FALSE), nrow(diabetes_data), replace = TRUE, prob = c(0.75, 0.25))
+  Train <- diabetes_data[sample, ]
+  Test <- diabetes_data[!sample, ]
+  # model training
+  model <- lm(formula(diabetes_both), data = Train)
+  # compute R Adjusted
+  R_Squared_Adj[i] <- summary(model)["adj.r.squared"]$adj.r.squared
+  # compute RMSD Train
+  Sum_Of_Square_Train <- sum((Train$Y - predict(model, newdata = Train))^2)
+  RMSD_Train[i] <- sqrt(Sum_Of_Square_Train / length(Train$Y))
+  # compute RMSD Test
+  Sum_Of_Square_Test <- sum((Test$Y - predict(model, newdata = Test))^2)
+  RMSD_Test[i] <- sqrt(Sum_Of_Square_Test / length(Test$Y))
+}
+```
+
+```{r, fig.width=8, fig.height=5}
+ggplot(data.frame(x = 1:length(R_Squared_Adj), y = R_Squared_Adj), aes(x, y)) +
+  geom_point(size = 1.5, color = "royalblue3") +
+  labs(title = "R-Adjusted Plot", x = "Index", y = "R-Adjusted") +
+  theme(plot.title = element_text(hjust = 0.5))
+```
+
+After plotting the R-Adjusted we observe that all the values are in between $0.47$ and $0.57$.
+
+\newpage
+
+Using boxplots we can compare the RSMD on train data set with the RMSD on the test data set:
+
+```{r}
+boxplot(RMSD_Train, RMSD_Test, 
+        main = "RMSD", names = c("RMSD Train", "RMSD Test"), 
+        col = c("royalblue1", "coral1"))
+```
+
+We notice that the interquatile of the RMSD computed on the test data set is larger than the interquantile of the RMSD on the train data set. We can explain that by the fact that the coefficients are estimated based on the train data set which means they perfectly fit those data compared to the test data. We also observe that the min on the test data set is lower than the min on the train data set, same for the max of the test data set which are larger than the max of the train data set. Even though, we can see that the two medians are quite similar. This plot help us to identify if our model is overfitting the train data set.
+
+\newpage
+
+# Ridge Regeression
+
+```{r}
+diabetes_ridge <- lm.ridge(formula = Y ~ ., data = diabetes_data, lambda = seq(0,10,0.01))
+```
+
+For better looking plots and easier results manipulation we will use the library broom:
+
+* Tidy constructs a tibble that summarizes the model’s statistical findings;
+
+* Glance construct a concise one-row summary of the model.
+
+```{r}
+tidy_ridge <- tidy(diabetes_ridge)
+glance_ridge <- glance(diabetes_ridge)
+```
+
+```{r}
+ggplot(tidy_ridge, aes(lambda, GCV)) + 
+  geom_line(lwd = 1.1) + 
+  geom_vline(xintercept = glance_ridge$lambdaGCV, col = "red", lty = 2, lwd = 1) +
+  labs(title = "Generalized Cross Validation Minimization",
+       x = "Lambda", y = "Generalized Cross Validation") +
+  theme(plot.title = element_text(hjust = 0.5))
+```
+
+We want to choose the best lambda for our model, in order to that we need to minimize the Generalized Cross Validation. In the plot below, we can see the GCV for different values of lambda between 0 and 10. The red line shows us the value of lambda which minimizes the GCV.
+
+```{r}
+ggplot(tidy_ridge, aes(lambda, estimate, color = term)) + 
+  geom_line(lwd = 1) +
+  labs(title = "Ridge Regularization Path",
+       x = "Lambda", y = "Estimated Coefficients") +
+  theme(plot.title = element_text(hjust = 0.5))
+```
+
+In the plot above, we can see the values of all the evolution of the coefficient values depending on lambda. Knowing that we are doing a ridge regression, we can tell that they will all converge to 0 for the same value of lambda. Here we just found the value of lambda that minimizes GCV, using this value we found the corresponding coefficients:
+
+```{r}
+min_lambda_index <- which.min(diabetes_ridge$GCV)
+coef_ridge <- coef(lm.ridge(formula = Y ~ ., 
+                            data = diabetes_data, 
+                            lambda = diabetes_ridge$GCV[min_lambda_index]))
+coef_ridge
+```
+
+```{r}
+X <- cbind(rep(1, nrow(diabetes_data)), diabetes_data[c(1:10)])
+colnames(X)[1] <- "1"
+Y <- diabetes_data$Y
+Y_ridge <- as.matrix(X) %*% as.vector(coef_ridge)
+sqrt(sum((Y - Y_ridge) ^ 2) / length(Y_ridge))
+```
+
+The value of the mean quadratic error is $53$ which is quite big if we look at the order of magnitude of the values of our target variable $Y$.
+
+```{r}
+comparaison_data <- as.data.frame(cbind(Y, Y_ridge))
+ggplot(data = comparaison_data, mapping = aes(x = Y, y = Y_ridge)) +
+  geom_point(size = 1.7, color = "royalblue3") +
+  geom_abline(size = 1.2, color = "tomato1") +
+  labs(title = "Comparison between real and predicted values",
+       x = "Real Values (Y)", y = "Predicted Values (Y_ridge)") +
+  theme(plot.title = element_text(hjust = 0.5))
+```
+
+By plotting the real values versus the ridge prediction values computed we can see that the points are sometimes really far from the first bisector, which means the model doesn't quite good predictions.
+
+# Lasso Regression
+
+```{r}
+diabetes_lasso <- lars(as.matrix(X), Y, type = "lasso")
+```
+
+```{r}
+plot(diabetes_lasso)
+```
+
+In the plot above we can observe the evolution of the variable coefficients. So when $\lambda$ is equal to zero, there is no penalization, and you have the OLS solution which corresponds to the $max|\beta| = max\sum{\beta_i}$.
+
+As the penalization $\lambda$ increases, $\sum{\beta_i}$ is pulled towards zero, with the less important variables being pulled to zero earlier. At some level of $\lambda$, all the $\beta_i$ have been pulled to zero.
+
+The x-axis of the graph instead of presenting it as high $\lambda$ on the left decreasing to zero when moving right, it presents it as the ratio of the sum of the absolute current estimate over the sum of the absolute OLS estimates.
+
+The vertical bars indicate when a variable has been pulled to zero and is labeled with the number of variables remaining in the model.
+
+The y-axis being standardized coefficients, generally when running LASSO, we need to standardize our variables so that the penalization occurs equally over the variables. If they were measured on different scales, the penalization would be uneven.
+
+\newpage
+
+```{r}
+ggplot(data = as.data.frame(diabetes_lasso$lambda),
+       mapping = aes(x = seq(1,12), y = diabetes_lasso$lambda)) +
+  geom_point(size = 2, color = "royalblue3") +
+  geom_line(size = 1, color = "royalblue3") +
+  labs(title = "Lasso Lambda", x = "Index", y = "Lambda") +
+  theme(plot.title = element_text(hjust = 0.5))
+```
+
+The above plot shows that the values of $\lambda$ are decreasing by the index.
+
+As we know that:
+
+* the biggest value of $\lambda$ will give us a model with no variables left
+
+* the lowest value of $\lambda$ will give us a model with all the variables.
+
+So, the plot is consistent with the previous one.
+
+\newpage
+
+```{r}
+coef_lasso <- predict.lars(diabetes_lasso, X, type ="coefficients", mode = "lambda", s = 0)
+barplot(coef_lasso$coefficients, main = "Lasso Coefficients (lambda = 0)", col = "royalblue3")
+```
+
+We can see that the predicted coefficients for $\lambda = 0$ gives us a model with:
+
+* SEX;
+
+* BMI;
+
+* BP;
+
+* S1;
+
+* S2; 
+
+* S3; 
+
+* S4; 
+
+* S5;
+
+* S6.
+
+Let's now try to do the same plot with a larger value of $\lambda$, therefore we are going to recompute the lasso prediction using Lars again and plot the new coefficients obtained.
+
+\newpage
+
+```{r}
+coef_lasso <- predict.lars(diabetes_lasso, X, type ="coefficients", mode = "lambda", s = 100)
+barplot(coef_lasso$coefficients, main = "Lasso Coefficients (lambda = 100)", col = "royalblue3")
+```
+
+We can see that the predicted coefficients for $\lambda = 100$ gives us a model with:
+
+* SEX;
+* BMI; 
+* BP;
+* S3;
+* S5.
+
+We are going to choose the $\lambda$ with the lowest mean quadratic error.
+
+```{r}
+MSE_lasso <- vector(length = length(diabetes_lasso$lambda) - 1)
+for (k in 1:length(diabetes_lasso$lambda))
+{
+  Y_lasso <- predict.lars(diabetes_lasso, X, type = "fit",
+                          mode = "lambda", s = diabetes_lasso$lambda[k])$fit
+  MSE_lasso[k-1] <- sqrt(sum((Y - Y_lasso) ^ 2) / length(Y_lasso))
+}
+min_lambda <- diabetes_lasso$lambda[which.min(MSE_lasso)]
+min_lambda
+```
+
+The value of $\lambda$ which minimizes the mean quadratic error is $2.182267$.
+
+The minimum of mean quadratic error is $53.49715$.
+
+The coefficients corresponding to this value of $\lambda$ are the following:
+
+```{r}
+Y_lasso <- predict.lars(diabetes_lasso, X, type = "coefficients",
+                        mode = "lambda", s = min_lambda)
+data.frame(Y_lasso$coefficients)
+```
+
+```{r}
+barplot(Y_lasso$coefficients, main = "Lasso Coefficients (lambda = 2.182267)",col = "royalblue3")
+```
+
+Here we can see the variables remaining in the model with their corresponding coefficients for the best value of $\lambda$ that we have selected by minimizing the mean squared error.
+
+# Conclusion
+
+In the classical regression, we just try to minimize the log-likelihood:
+
+$$\beta_{OLS} = argmin_{\beta} \sum_{i=0}^n (y_i - \beta . x_i)^2$$
+
+We can easily see that Ridge Regression encourages all coefficients to become small, meanwhile Lasso Regression encourages many coefficients to become zero, and a few non-zero. Both of them will reduce the accuracy on the training set, but improve prediction in some way by avoiding the overfitting.
+
+$$\beta_{LASSO} = argmin_{\beta} \sum_{i=0}^n (y_i - \beta . x_i)^2 + \lambda . ||\beta||_1$$
+
+$$\beta_{RIDGE} = argmin_{\beta} \sum_{i=0}^n (y_i - \beta . x_i)^2 + \lambda . ||\beta||_2^2$$
+
+There is another method of penalization that can be very helpful if we want to combine Lasso and Ridge Regression by penalizing the likelihood with an L1-term and an L2-term.
+
+$$\beta_{ELASTIC-NET} = argmin_{\beta} \sum_{i=0}^n (y_i - \beta . x_i)^2 + \lambda_1 . ||\beta||_1 + \lambda_2 . ||\beta||_2^2$$
+Elastic Net Regression can be really helpful in order to have both advantages of Lasso and Ridge Regression. Another very useful penalization method is Group-Lasso which multiplies the $\beta$ values by the square root number of elements in the group $i$.
+
+$$\beta_{GROUP-LASSO} = argmin_{\beta} \sum_{i=0}^n (y_i - \beta . x_i)^2 + \lambda \sum_{i=0}^n \sqrt{p_i} . ||\beta_i||_1$$
+
+In the specific case of linear regression where there are not only continuous but also categorical variables (factors), the Lasso solution is not satisfactory as it only selects individual variables instead of whole factors. Moreover, the Lasso solution depends on how the variables are encoded. Choosing different contrasts for a categorical predictor will produce different solutions in general. Intuitively speaking, the Group Lasso can be preferred to the Lasso since it provides a means for us to incorporate a certain type of additional information into our estimate for the true coefficient.
+
